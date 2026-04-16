@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>法官判決行為分析工具 - Judge Behavioral Profile Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', 'SimHei', sans-serif;
+            background: linear-gradient(135deg, #1a1f35 0%, #0f1419 100%);
+            color: #e0e6ed;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #1fb0a8;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2em;
+            color: #1fb0a8;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #a8b5c8;
+            font-size: 0.9em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #252d3d;
+            border: 1px solid #3a4556;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h2 {
+            color: #1fb0a8;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card h2::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: #d4af37;
+            border-radius: 2px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px 16px;
+            background: #1fb0a8;
+            color: #1a1f35;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #17938a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(31, 176, 168, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: #3a4556;
+            color: #1fb0a8;
+        }
+
+        button.secondary:hover {
+            background: #4a5566;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            background: #1a1f35;
+            color: #e0e6ed;
+            border: 1px solid #3a4556;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            resize: vertical;
+            min-height: 150px;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #1fb0a8;
+        }
+
+        input[type="file"],
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            background: #1a1f35;
+            color: #e0e6ed;
+            border: 1px solid #3a4556;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: border-color 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        input[type="file"]::file-selector-button {
+            background: #1fb0a8;
+            color: #1a1f35;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #1fb0a8;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            background: #1a1f35;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid #d4af37;
+        }
+
+        .stat-label {
+            color: #a8b5c8;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #1fb0a8;
+            font-size: 1.4em;
+            font-weight: 700;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 600px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #3a4556;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 10px 15px;
+            background: transparent;
+            color: #a8b5c8;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .tab-btn.active {
+            color: #1fb0a8;
+            border-bottom-color: #1fb0a8;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        th {
+            background: #1a1f35;
+            color: #1fb0a8;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #3a4556;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #3a4556;
+        }
+
+        tr:hover {
+            background: #2a3240;
+        }
+
+        .highlight {
+            background: rgba(212, 175, 55, 0.1);
+            color: #d4af37;
+        }
+
+        .outlier {
+            background: rgba(255, 107, 107, 0.1);
+            color: #ff6b6b;
+        }
+
+        .message {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: rgba(31, 176, 168, 0.2);
+            color: #1fb0a8;
+            border-left: 3px solid #1fb0a8;
+        }
+
+        .message.error {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .message.info {
+            background: rgba(100, 150, 200, 0.2);
+            color: #a8d5ff;
+            border-left: 3px solid #6496c8;
+        }
+
+        .api-section {
+            background: #1a1f35;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 3px solid #d4af37;
+        }
+
+        .collapsible {
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #2a3240;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            user-select: none;
+        }
+
+        .collapsible.active {
+            background: #3a4556;
+        }
+
+        .collapsible::after {
+            content: '▼';
+            transition: transform 0.3s ease;
+        }
+
+        .collapsible:not(.active)::after {
+            transform: rotate(-90deg);
+        }
+
+        .content {
+            display: none;
+            padding: 15px 0;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .prediction-result {
+            background: #1a1f35;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid #d4af37;
+            margin-top: 15px;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 20px;
+            background: #0f1419;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1fb0a8, #d4af37);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a1f35;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .law-reference {
+            background: #1a1f35;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+            border-left: 2px solid #1fb0a8;
+            font-size: 0.9em;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #a8b5c8;
+        }
+
+        .empty-state p {
+            margin-bottom: 15px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #3a4556;
+            border-top-color: #1fb0a8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .case-item {
+            background: #1a1f35;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #1fb0a8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .case-item:hover {
+            background: #2a3240;
+            border-left-color: #d4af37;
+        }
+
+        .case-number {
+            color: #1fb0a8;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .case-meta {
+            color: #a8b5c8;
+            font-size: 0.85em;
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            .card {
+                background: white;
+                border: 1px solid #ddd;
+            }
+            button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚖️ 法官判決行為分析工具</h1>
+            <p class="subtitle">Judge Behavioral Profile Analyzer for Taiwan Legal System</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Input Section -->
+            <div class="card">
+                <h2>輸入判決文書</h2>
+
+                <div id="message" class="message"></div>
+
+                <div class="button-group">
+                    <button onclick="loadDemoData()">📊 載入範例</button>
+                    <button class="secondary" onclick="toggleUploadMode()">📁 上傳檔案</button>
+                </div>
+
+                <!-- Paste Mode -->
+                <div id="pasteMode">
+                    <label style="display: block; margin-bottom: 10px; color: #a8b5c8; font-size: 0.9em;">貼上判決全文或多份判決文書：</label>
+                    <textarea id="judgeTextInput" placeholder="貼上判決文書（可多份）...&#10;或粘貼 JSON 格式數據..."></textarea>
+                    <button style="margin-top: 10px;" onclick="analyzeText()">分析文書</button>
+                </div>
+
+                <!-- Upload Mode -->
+                <div id="uploadMode" style="display: none;">
+                    <label style="display: block; margin-bottom: 10px; color: #a8b5c8; font-size: 0.9em;">上傳 JSON 或 CSV 檔案（司法院判決下載格式）：</label>
+                    <input type="file" id="fileInput" accept=".json,.csv,.xlsx">
+                    <button onclick="uploadFile()">上傳並分析</button>
+                </div>
+
+                <div class="api-section">
+                    <div class="collapsible" onclick="toggleCollapsible(this)">
+                        🔑 AI 增強分析（可選）
+                    </div>
+                    <div class="content">
+                        <p style="font-size: 0.85em; color: #a8b5c8; margin-bottom: 10px;">選擇 API 提供者取得更深入的分析：</p>
+                        <label style="display: block; margin-bottom: 8px;">
+                            <input type="radio" name="apiProvider" value="claude" checked> Claude API
+                        </label>
+                        <label style="display: block; margin-bottom: 12px;">
+                            <input type="radio" name="apiProvider" value="openai"> OpenAI API
+                        </label>
+                        <input type="password" id="apiKey" placeholder="輸入 API Key...">
+                        <small style="color: #a8b5c8; display: block; margin-top: 5px;">您的 API Key 僅在本地使用，不會被傳送。</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Panel -->
+            <div class="card">
+                <h2>分析統計</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">已分析案件數</div>
+                        <div class="stat-value" id="caseCount">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">平均判決長度</div>
+                        <div class="stat-value" id="avgLength">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">最常引用法條</div>
+                        <div class="stat-value" id="topLaw">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">案件類型</div>
+                        <div class="stat-value" id="caseTypes">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Dashboard -->
+        <div class="dashboard" id="dashboardContainer" style="display: none;">
+            <div class="card">
+                <h2>1. 裁判傾向</h2>
+                <div class="chart-container">
+                    <canvas id="rulingTendencyChart"></canvas>
+                </div>
+                <div style="font-size: 0.85em; color: #a8b5c8;">
+                    <p>勝訴/敗訴傾向分析（按案件類型）</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>2. 量刑/金額模式</h2>
+                <div class="chart-container">
+                    <canvas id="sentencingPatternChart"></canvas>
+                </div>
+                <div style="font-size: 0.85em; color: #a8b5c8;">
+                    <p>刑期/賠償金額分布</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>3. 法律哲學</h2>
+                <div class="chart-container">
+                    <canvas id="legalPhilosophyChart"></canvas>
+                </div>
+                <div style="font-size: 0.85em; color: #a8b5c8;">
+                    <p>常被引用的法條與判例</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>4. 語言風格</h2>
+                <div class="chart-container">
+                    <canvas id="languageStyleChart"></canvas>
+                </div>
+                <div style="font-size: 0.85em; color: #a8b5c8;">
+                    <p>判決書撰寫風格分析</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>5. 異常案件偵測</h2>
+                <div id="outlierDetectionContent">
+                    <div class="empty-state">
+                        <p>分析中...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>預測性洞見</h2>
+                <label style="display: block; margin-bottom: 10px; color: #a8b5c8; font-size: 0.9em;">描述假設案件情景：</label>
+                <textarea id="hypotheticalCase" placeholder="例如：一起民事借款糾紛，借貸金額新臺幣100萬元，借款人主張已部分還款...&#10;&#10;系統將根據分析結果預測該法官可能的判決傾向。"></textarea>
+                <button style="margin-top: 10px;" onclick="predictOutcome()">預測判決結果</button>
+                <div id="predictionResult"></div>
+            </div>
+        </div>
+
+        <!-- Case Details Tab -->
+        <div class="card" id="detailsCard" style="display: none;">
+            <h2>案件詳情與原始數據</h2>
+            <div class="tabs" id="caseTabs"></div>
+            <div id="caseContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Data structure
+        let analyzedCases = [];
+        let charts = {};
+
+        // Taiwan Legal Constants
+        const CASE_TYPES = ['民事', '刑事', '行政', '其他'];
+        const COURT_HIERARCHY = ['地方法院', '高等法院', '最高法院'];
+
+        // Chinese numeral mapping
+        const CHINESE_NUMERALS = {
+            '壹': 1, '貳': 2, '參': 3, '肆': 4, '伍': 5,
+            '陸': 6, '柒': 7, '捌': 8, '玖': 9, '拾': 10,
+            '佰': 100, '仟': 1000, '萬': 10000, '百': 100,
+            '千': 1000, '万': 10000
+        };
+
+        // Helper Functions
+        function showMessage(text, type = 'info') {
+            const msgEl = document.getElementById('message');
+            msgEl.textContent = text;
+            msgEl.className = `message show ${type}`;
+            setTimeout(() => msgEl.classList.remove('show'), 5000);
+        }
+
+        function toggleUploadMode() {
+            const pasteMode = document.getElementById('pasteMode');
+            const uploadMode = document.getElementById('uploadMode');
+            if (pasteMode.style.display === 'none') {
+                pasteMode.style.display = 'block';
+                uploadMode.style.display = 'none';
+            } else {
+                pasteMode.style.display = 'none';
+                uploadMode.style.display = 'block';
+            }
+        }
+
+        function toggleCollapsible(el) {
+            el.classList.toggle('active');
+            el.nextElementSibling.classList.toggle('active');
+        }
+
+        // Chinese numeral conversion
+        function convertChineseNumber(text) {
+            if (!text) return 0;
+            text = text.replace(/[,，]/g, '');
+
+            // Handle full-width numerals and mixed formats
+            let result = 0;
+            let current = 0;
+            let temp = 0;
+
+            for (let char of text) {
+                if (CHINESE_NUMERALS[char]) {
+                    temp = CHINESE_NUMERALS[char];
+                    if (char === '拾' || char === '十') {
+                        current += Math.max(temp, 1) * 10;
+                        temp = 0;
+                    } else if (char === '佰' || char === '百') {
+                        current += Math.max(temp, 1) * 100;
+                        temp = 0;
+                    } else if (char === '仟' || char === '千') {
+                        current += Math.max(temp, 1) * 1000;
+                        temp = 0;
+                    } else if (char === '萬' || char === '万') {
+                        result += (current + temp) * 10000;
+                        current = 0;
+                        temp = 0;
+                    }
+                } else if (char >= '0' && char <= '9') {
+                    temp = temp * 10 + parseInt(char);
+                }
+            }
+            result += current + temp;
+            return Math.max(result, 0);
+        }
+
+        // Extract Taiwan judgment components
+        function extractMainText(fullText) {
+            // Handle full-width spaces in 主 文 and 理 由
+            const mainPattern = /主\s*文([\s\S]*?)(?:理\s*由|$)/;
+            const match = fullText.match(mainPattern);
+            return match ? match[1].trim() : '';
+        }
+
+        function extractSentences(fullText) {
+            const sentences = [];
+            // Match criminal sentences: 有期徒刑 + duration
+            const sentencePatterns = [
+                /有期徒刑([壹貳參肆伍陸柒捌玖拾佰0-9年月日]+)/g,
+                /拘役([壹貳參肆伍陸柒捌玖拾佰0-9年月日]+)/g,
+                /徒刑([壹貳參肆伍陸柒捌玖拾佰0-9年月日]+)/g
+            ];
+
+            for (let pattern of sentencePatterns) {
+                let match;
+                while ((match = pattern.exec(fullText)) !== null) {
+                    const rawDuration = match[1];
+                    const years = (rawDuration.match(/([壹貳參肆伍陸柒捌玖拾]+)年/) || [])[1];
+                    const months = (rawDuration.match(/([壹貳參肆伍陸柒捌玖拾]+)月/) || [])[1];
+                    const days = (rawDuration.match(/([壹貳參肆伍陸柒捌玖拾]+)日/) || [])[1];
+
+                    let monthCount = 0;
+                    if (years) monthCount += convertChineseNumber(years) * 12;
+                    if (months) monthCount += convertChineseNumber(months);
+                    if (days) monthCount += Math.round(convertChineseNumber(days) / 30);
+
+                    sentences.push({
+                        type: match[0].split('[')[0].trim(),
+                        duration: monthCount,
+                        raw: match[0]
+                    });
+                }
+            }
+            return sentences;
+        }
+
+        function extractAwards(fullText) {
+            const awards = [];
+            // Match NT$ amounts in full-width Chinese numerals and Arabic numerals
+            const awardPatterns = [
+                /新臺幣([壹貳參肆伍陸柒捌玖拾佰仟萬0-9，]+)元/g,
+                /NT\$\s*([\d,]+)/g,
+                /NT\$([\d,]+)/g
+            ];
+
+            for (let pattern of awardPatterns) {
+                let match;
+                while ((match = pattern.exec(fullText)) !== null) {
+                    const amount = convertChineseNumber(match[1]);
+                    if (amount > 0) {
+                        awards.push(amount);
+                    }
+                }
+            }
+            return awards;
+        }
+
+        function extractStatutes(fullText) {
+            const statutes = new Set();
+            // Match Taiwan legal statute format: 民法第xxx條, 刑法第xxx條 etc.
+            const statutePattern = /([民刑行稅商][\w法]*?)第\s*(\d+)\s*(?:條|項)/g;
+            let match;
+            while ((match = statutePattern.exec(fullText)) !== null) {
+                statutes.add(`${match[1]}第${match[2]}條`);
+            }
+            return Array.from(statutes);
+        }
+
+        function extractPrecedents(fullText) {
+            const precedents = new Set();
+            // Match Taiwan precedent format: 判例○○○○字第xxx號
+            const precedentPattern = /([最高高等地方]法院)?(判例|決\s*例)[\s\S]*?第\s*(\d+)\s*號/g;
+            let match;
+            while ((match = precedentPattern.exec(fullText)) !== null) {
+                precedents.add(match[0].trim());
+            }
+            return Array.from(precedents);
+        }
+
+        function analyzeLanguageStyle(fullText) {
+            const len = fullText.length;
+            const formalWords = (fullText.match(/爰|茲|俾|其|查|認定|判決|聲請|抗告/g) || []).length;
+            const empathyWords = (fullText.match(/尊重|人權|公平|正義|考量/g) || []).length;
+            const conciseness = len / 2000; // Lower is more concise
+
+            return {
+                formality: Math.min(100, (formalWords / len) * 10000),
+                empathy: Math.min(100, (empathyWords / len) * 10000),
+                conciseness: Math.min(100, 100 / conciseness)
+            };
+        }
+
+        function detectOutliers(cases) {
+            if (cases.length < 3) return [];
+
+            // Calculate median sentence/award
+            const sentences = cases.filter(c => c.sentence && c.sentence > 0).map(c => c.sentence);
+            const awards = cases.filter(c => c.award && c.award > 0).map(c => c.award);
+
+            const medianSentence = sentences.length ? sentences.sort((a,b)=>a-b)[Math.floor(sentences.length/2)] : 0;
+            const medianAward = awards.length ? awards.sort((a,b)=>a-b)[Math.floor(awards.length/2)] : 0;
+
+            const outliers = [];
+            for (let c of cases) {
+                let isOutlier = false;
+                if (c.sentence && medianSentence > 0 && Math.abs(c.sentence - medianSentence) > medianSentence * 1.5) {
+                    isOutlier = true;
+                }
+                if (c.award && medianAward > 0 && Math.abs(c.award - medianAward) > medianAward * 1.5) {
+                    isOutlier = true;
+                }
+                if (isOutlier) outliers.push(c);
+            }
+            return outliers;
+        }
+
+        // Parse judgment text
+        function parseJudgmentText(text) {
+            const cases = [];
+
+            // Try to parse as JSON first
+            try {
+                const data = JSON.parse(text);
+                if (Array.isArray(data)) {
+                    return data.map(mapChineseFields);
+                } else if (data.cases) {
+                    return data.cases.map(mapChineseFields);
+                }
+            } catch (e) {}
+
+            // Parse as CSV-like or raw judgment text
+            const entries = text.split(/\n\n+/).filter(e => e.trim());
+
+            for (let entry of entries) {
+                if (entry.includes('主') && entry.includes('文')) {
+                    cases.push(parseRawJudgment(entry));
+                } else if (entry.includes(':') || entry.includes('：')) {
+                    cases.push(parseStructuredText(entry));
+                }
+            }
+
+            return cases.length > 0 ? cases : [parseRawJudgment(text)];
+        }
+
+        function mapChineseFields(obj) {
+            return {
+                caseNumber: obj.裁判字號 || obj.caseNumber || '',
+                date: obj.裁判日期_西元 || obj.date || '',
+                category: obj.案件類別 || obj.category || '民事',
+                reason: obj.裁判案由 || obj.reason || '',
+                fullText: obj.裁判全文 || obj.fullText || '',
+                court: obj.法院 || obj.court || '地方法院'
+            };
+        }
+
+        function parseRawJudgment(text) {
+            const mainText = extractMainText(text);
+            const ruling = mainText.substring(0, 200);
+
+            return {
+                caseNumber: (text.match(/([A-Z]*)(\d+)字第(\d+)號/) || ['', '', '', ''])[0] || '未知',
+                date: (text.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/) || [''])[0] || '',
+                category: detectCaseType(text),
+                reason: (text.match(/訴訟標的|爭點|案由[\s：：](.*?)(?:\n|。)/) || ['', ''])[1] || '',
+                fullText: text,
+                court: detectCourt(text),
+                ruling: ruling,
+                award: extractAwards(text)[0] || 0,
+                sentence: extractSentences(text).reduce((sum, s) => sum + s.duration, 0),
+                statutes: extractStatutes(text),
+                precedents: extractPrecedents(text),
+                languageStyle: analyzeLanguageStyle(text)
+            };
+        }
+
+        function parseStructuredText(text) {
+            const lines = text.split('\n');
+            const obj = {};
+            for (let line of lines) {
+                const [key, value] = line.split(/[:：]/).map(s => s.trim());
+                obj[key] = value;
+            }
+            return mapChineseFields(obj);
+        }
+
+        function detectCaseType(text) {
+            for (let type of ['刑事', '民事', '行政']) {
+                if (text.includes(type)) return type;
+            }
+            return '民事';
+        }
+
+        function detectCourt(text) {
+            for (let court of ['最高法院', '高等法院', '地方法院']) {
+                if (text.includes(court)) return court;
+            }
+            return '地方法院';
+        }
+
+        // Analysis functions
+        function analyzeText() {
+            const text = document.getElementById('judgeTextInput').value.trim();
+            if (!text) {
+                showMessage('請輸入或貼上判決文書', 'error');
+                return;
+            }
+
+            analyzedCases = parseJudgmentText(text);
+            if (analyzedCases.length === 0) {
+                showMessage('無法解析判決文書，請檢查格式', 'error');
+                return;
+            }
+
+            // Enrich with API if available
+            const apiKey = document.getElementById('apiKey').value;
+            const apiProvider = document.querySelector('input[name="apiProvider"]:checked').value;
+
+            if (apiKey) {
+                enrichWithAPI(apiKey, apiProvider).then(() => {
+                    updateAnalysis();
+                });
+            } else {
+                updateAnalysis();
+            }
+        }
+
+        async function enrichWithAPI(apiKey, provider) {
+            showMessage('使用 AI 增強分析中...', 'info');
+
+            for (let caseData of analyzedCases) {
+                try {
+                    const prompt = `分析台灣法律判決書，重點提取以下信息：\n\n${caseData.fullText.substring(0, 2000)}\n\n請提供：\n1. 簡明摘要\n2. 關鍵法律原則\n3. 判決邏輯`;
+
+                    if (provider === 'claude') {
+                        const response = await fetch('https://api.anthropic.com/v1/messages', {
+                            method: 'POST',
+                            headers: {
+                                'x-api-key': apiKey,
+                                'content-type': 'application/json',
+                                'anthropic-version': '2023-06-01'
+                            },
+                            body: JSON.stringify({
+                                model: 'claude-3-5-sonnet-20241022',
+                                max_tokens: 500,
+                                messages: [{ role: 'user', content: prompt }]
+                            })
+                        });
+                        const data = await response.json();
+                        caseData.aiAnalysis = data.content?.[0]?.text || '';
+                    } else if (provider === 'openai') {
+                        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${apiKey}`,
+                                'content-type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                model: 'gpt-4o-mini',
+                                messages: [{ role: 'user', content: prompt }],
+                                max_tokens: 500
+                            })
+                        });
+                        const data = await response.json();
+                        caseData.aiAnalysis = data.choices?.[0]?.message?.content || '';
+                    }
+                } catch (e) {
+                    console.log('API enrichment failed:', e);
+                }
+            }
+        }
+
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showMessage('請選擇檔案', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target.result;
+                    document.getElementById('judgeTextInput').value = content;
+                    analyzeText();
+                } catch (err) {
+                    showMessage('檔案讀取失敗', 'error');
+                }
+            };
+
+            if (file.name.endsWith('.json') || file.name.endsWith('.csv')) {
+                reader.readAsText(file);
+            } else {
+                showMessage('僅支援 JSON 或 CSV 檔案', 'error');
+            }
+        }
+
+        function loadDemoData() {
+            const demoData = [
+                {
+                    caseNumber: '臺北地方法院 111年度民字第001號',
+                    date: '2022-03-15',
+                    category: '民事',
+                    reason: '買賣糾紛',
+                    court: '地方法院',
+                    fullText: `臺北地方法院民事判決
+                        111年度民字第001號
+                        訴訟當事人：甲方（原告），乙方（被告）
+                        主　文
+                        被告應給付原告新臺幣壹百萬元及法定遲延利息。
+                        理　由
+                        本件原告主張被告購買系爭商品後未付款。經查：
+                        一、民法第 345 條規定買賣當事人應依約給付價金。
+                        二、本院認定被告確未支付貨款，爰判決如主文。
+                        參考判例：最高法院 50 年度台上字第 2000 號`,
+                    award: 1000000,
+                    sentence: 0,
+                    statutes: ['民法第345條', '民法第125條'],
+                    precedents: ['最高法院50年度台上字第2000號'],
+                    languageStyle: { formality: 75, empathy: 35, conciseness: 60 }
+                },
+                {
+                    caseNumber: '臺灣高等法院 111年度上字第002號',
+                    date: '2022-06-20',
+                    category: '民事',
+                    reason: '侵權行為',
+                    court: '高等法院',
+                    fullText: `臺灣高等法院民事判決
+                        111年度上字第002號
+                        訴訟當事人：甲方（上訴人），乙方（被上訴人）
+                        主　文
+                        原判決除一部分外予以撤銷，被上訴人應給付上訴人新臺幣伍拾萬元。
+                        理　由
+                        本件系爭侵權行為損害賠償事件，原審認定事實雖屬相當，
+                        惟關於賠償額之計算，本院認原審所為尚嫌過低。
+                        法院依民法第 184 條、第 193 條之規定，認被上訴人應賠償
+                        上訴人經濟損失新臺幣伍拾萬元。`,
+                    award: 500000,
+                    sentence: 0,
+                    statutes: ['民法第184條', '民法第193條'],
+                    precedents: [],
+                    languageStyle: { formality: 80, empathy: 40, conciseness: 65 }
+                },
+                {
+                    caseNumber: '臺北地方法院 111年度刑字第003號',
+                    date: '2022-08-10',
+                    category: '刑事',
+                    reason: '詐欺罪',
+                    court: '地方法院',
+                    fullText: `臺北地方法院刑事判決
+                        111年度刑字第003號
+                        被　告：甲
+                        主　文
+                        被告甲犯詐欺罪，處有期徒刑壹年陸月。
+                        理　由
+                        被告甲以詐欺方式取得被害人款項新臺幣貳拾萬元，
+                        經查明無誤，本院認應依刑法第 339 條規定科處。
+                        參考判例：最高法院 60 年度台上字第 5000 號`,
+                    award: 0,
+                    sentence: 18,
+                    statutes: ['刑法第339條'],
+                    precedents: ['最高法院60年度台上字第5000號'],
+                    languageStyle: { formality: 85, empathy: 30, conciseness: 70 }
+                }
+            ];
+
+            analyzedCases = demoData;
+            updateAnalysis();
+            showMessage('已載入範例判決（3份）', 'success');
+        }
+
+        function updateAnalysis() {
+            if (analyzedCases.length === 0) return;
+
+            // Update stats
+            document.getElementById('caseCount').textContent = analyzedCases.length;
+            const avgLen = Math.round(analyzedCases.reduce((sum, c) => sum + c.fullText.length, 0) / analyzedCases.length);
+            document.getElementById('avgLength').textContent = avgLen + ' 字';
+
+            // Top statute
+            const allStatutes = {};
+            analyzedCases.forEach(c => {
+                c.statutes?.forEach(s => {
+                    allStatutes[s] = (allStatutes[s] || 0) + 1;
+                });
+            });
+            const topStatute = Object.entries(allStatutes).sort((a,b) => b[1]-a[1])[0];
+            document.getElementById('topLaw').textContent = topStatute ? topStatute[0] : '-';
+
+            // Case types
+            const types = new Set(analyzedCases.map(c => c.category));
+            document.getElementById('caseTypes').textContent = Array.from(types).join('、');
+
+            // Generate charts
+            createCharts();
+
+            // Show dashboard
+            document.getElementById('dashboardContainer').style.display = 'grid';
+
+            // Populate case details
+            populateCaseDetails();
+            document.getElementById('detailsCard').style.display = 'block';
+        }
+
+        function createCharts() {
+            // 1. Ruling Tendency
+            const caseTypeStats = {};
+            analyzedCases.forEach(c => {
+                if (!caseTypeStats[c.category]) {
+                    caseTypeStats[c.category] = { win: 0, loss: 0, total: 0 };
+                }
+                caseTypeStats[c.category].total++;
+                if (c.award > 0 || c.sentence > 0) {
+                    caseTypeStats[c.category].win++;
+                } else {
+                    caseTypeStats[c.category].loss++;
+                }
+            });
+
+            const canvas1 = document.getElementById('rulingTendencyChart');
+            if (charts.ruling) charts.ruling.destroy();
+            charts.ruling = new Chart(canvas1, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(caseTypeStats),
+                    datasets: [
+                        {
+                            label: '勝訴/有利判決',
+                            data: Object.values(caseTypeStats).map(s => s.win),
+                            backgroundColor: '#1fb0a8'
+                        },
+                        {
+                            label: '敗訴/不利判決',
+                            data: Object.values(caseTypeStats).map(s => s.loss),
+                            backgroundColor: '#ff6b6b'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e6ed' }
+                        }
+                    },
+                    scales: {
+                        y: { ticks: { color: '#a8b5c8' }, grid: { color: '#3a4556' } },
+                        x: { ticks: { color: '#a8b5c8' }, grid: { color: '#3a4556' } }
+                    }
+                }
+            });
+
+            // 2. Sentencing Pattern
+            const sentences = analyzedCases.filter(c => c.sentence > 0).map(c => c.sentence);
+            const awards = analyzedCases.filter(c => c.award > 0).map(c => c.award / 100000);
+
+            const canvas2 = document.getElementById('sentencingPatternChart');
+            if (charts.sentencing) charts.sentencing.destroy();
+            charts.sentencing = new Chart(canvas2, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: '刑事刑期（月）',
+                            data: sentences.slice(0, 10).map((v, i) => ({ x: i, y: v })),
+                            backgroundColor: '#d4af37',
+                            showLine: true,
+                            borderColor: '#d4af37'
+                        },
+                        {
+                            label: '民事賠償（百萬元）',
+                            data: awards.slice(0, 10).map((v, i) => ({ x: i, y: v })),
+                            backgroundColor: '#1fb0a8',
+                            showLine: true,
+                            borderColor: '#1fb0a8'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#e0e6ed' } }
+                    },
+                    scales: {
+                        y: { ticks: { color: '#a8b5c8' }, grid: { color: '#3a4556' } },
+                        x: { ticks: { color: '#a8b5c8' }, grid: { color: '#3a4556' } }
+                    }
+                }
+            });
+
+            // 3. Legal Philosophy
+            const allStatutes = {};
+            analyzedCases.forEach(c => {
+                c.statutes?.forEach(s => {
+                    allStatutes[s] = (allStatutes[s] || 0) + 1;
+                });
+            });
+            const topStatutes = Object.entries(allStatutes)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8);
+
+            const canvas3 = document.getElementById('legalPhilosophyChart');
+            if (charts.philosophy) charts.philosophy.destroy();
+            charts.philosophy = new Chart(canvas3, {
+                type: 'bar',
+                data: {
+                    labels: topStatutes.map(s => s[0]),
+                    datasets: [{
+                        label: '引用次數',
+                        data: topStatutes.map(s => s[1]),
+                        backgroundColor: '#d4af37'
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#e0e6ed' } }
+                    },
+                    scales: {
+                        y: { ticks: { color: '#a8b5c8' }, grid: { color: '#3a4556' } },
+                        x: { ticks: { color: '#a8b5c8' }, grid: { color: '#3a4556' } }
+                    }
+                }
+            });
+
+            // 4. Language Style
+            const avgStyle = {
+                formality: 0,
+                empathy: 0,
+                conciseness: 0
+            };
+            analyzedCases.forEach(c => {
+                avgStyle.formality += c.languageStyle?.formality || 0;
+                avgStyle.empathy += c.languageStyle?.empathy || 0;
+                avgStyle.conciseness += c.languageStyle?.conciseness || 0;
+            });
+            Object.keys(avgStyle).forEach(k => {
+                avgStyle[k] /= analyzedCases.length;
+            });
+
+            const canvas4 = document.getElementById('languageStyleChart');
+            if (charts.language) charts.language.destroy();
+            charts.language = new Chart(canvas4, {
+                type: 'radar',
+                data: {
+                    labels: ['正式性', '同理心', '簡潔性'],
+                    datasets: [{
+                        label: '風格特徵',
+                        data: [avgStyle.formality, avgStyle.empathy, avgStyle.conciseness],
+                        backgroundColor: 'rgba(31, 176, 168, 0.2)',
+                        borderColor: '#1fb0a8',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#1fb0a8'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#e0e6ed' } }
+                    },
+                    scales: {
+                        r: {
+                            ticks: { color: '#a8b5c8', beginAtZero: true, max: 100 },
+                            grid: { color: '#3a4556' }
+                        }
+                    }
+                }
+            });
+
+            // 5. Outlier Detection
+            const outliers = detectOutliers(analyzedCases);
+            const outlierDiv = document.getElementById('outlierDetectionContent');
+
+            if (outliers.length === 0) {
+                outlierDiv.innerHTML = '<div class="empty-state"><p>✓ 未發現異常案件。判決模式一致。</p></div>';
+            } else {
+                let html = '<div class="table-container"><table>';
+                html += '<thead><tr><th>案號</th><th>日期</th><th>類別</th><th>異常指標</th></tr></thead><tbody>';
+                outliers.forEach(c => {
+                    html += `<tr class="outlier">
+                        <td>${c.caseNumber}</td>
+                        <td>${c.date}</td>
+                        <td>${c.category}</td>
+                        <td>${c.sentence > 0 ? '刑期異常' : '賠償額異常'}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+                outlierDiv.innerHTML = html;
+            }
+        }
+
+        function populateCaseDetails() {
+            const tabsContainer = document.getElementById('caseTabs');
+            const contentContainer = document.getElementById('caseContent');
+
+            tabsContainer.innerHTML = '';
+            contentContainer.innerHTML = '';
+
+            analyzedCases.forEach((caseData, idx) => {
+                const tabBtn = document.createElement('button');
+                tabBtn.className = 'tab-btn' + (idx === 0 ? ' active' : '');
+                tabBtn.textContent = `案件 ${idx + 1}`;
+                tabBtn.onclick = () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tabBtn.classList.add('active');
+                    document.getElementById(`case-${idx}`).classList.add('active');
+                };
+                tabsContainer.appendChild(tabBtn);
+
+                const content = document.createElement('div');
+                content.id = `case-${idx}`;
+                content.className = 'tab-content' + (idx === 0 ? ' active' : '');
+                content.innerHTML = `
+                    <div class="case-item">
+                        <div class="case-number">${caseData.caseNumber}</div>
+                        <div class="case-meta">裁判日期: ${caseData.date}</div>
+                        <div class="case-meta">案件類別: ${caseData.category}</div>
+                        <div class="case-meta">法院: ${caseData.court}</div>
+                    </div>
+
+                    <h3 style="color: #1fb0a8; margin: 15px 0 10px 0;">案由</h3>
+                    <p style="color: #a8b5c8;">${caseData.reason}</p>
+
+                    ${caseData.award > 0 ? `<h3 style="color: #d4af37; margin: 15px 0 10px 0;">裁定賠償金額</h3>
+                    <p style="color: #a8b5c8;">新臺幣 ${caseData.award.toLocaleString('zh-TW')} 元</p>` : ''}
+
+                    ${caseData.sentence > 0 ? `<h3 style="color: #d4af37; margin: 15px 0 10px 0;">刑期</h3>
+                    <p style="color: #a8b5c8;">${Math.floor(caseData.sentence / 12)} 年 ${caseData.sentence % 12} 月</p>` : ''}
+
+                    ${caseData.statutes.length > 0 ? `<h3 style="color: #1fb0a8; margin: 15px 0 10px 0;">引用法條</h3>
+                    ${caseData.statutes.map(s => `<div class="law-reference">${s}</div>`).join('')}` : ''}
+
+                    ${caseData.aiAnalysis ? `<h3 style="color: #1fb0a8; margin: 15px 0 10px 0;">AI 分析</h3>
+                    <p style="color: #a8b5c8;">${caseData.aiAnalysis}</p>` : ''}
+
+                    <h3 style="color: #1fb0a8; margin: 15px 0 10px 0;">判決全文（首 500 字）</h3>
+                    <p style="color: #a8b5c8; font-size: 0.85em; white-space: pre-wrap;">${caseData.fullText.substring(0, 500)}...</p>
+                `;
+                contentContainer.appendChild(content);
+            });
+        }
+
+        function predictOutcome() {
+            const hypotheticalText = document.getElementById('hypotheticalCase').value.trim();
+            if (!hypotheticalText) {
+                showMessage('請描述假設案件情景', 'error');
+                return;
+            }
+
+            if (analyzedCases.length === 0) {
+                showMessage('請先分析判決文書', 'error');
+                return;
+            }
+
+            // Calculate prediction based on case patterns
+            const prediction = calculatePrediction(hypotheticalText);
+            displayPrediction(prediction);
+        }
+
+        function calculatePrediction(hypotheticalText) {
+            // Analyze hypothetical case against patterns
+            const avgAward = analyzedCases.filter(c => c.award > 0).reduce((sum, c) => sum + c.award, 0) /
+                            Math.max(analyzedCases.filter(c => c.award > 0).length, 1);
+            const avgSentence = analyzedCases.filter(c => c.sentence > 0).reduce((sum, c) => sum + c.sentence, 0) /
+                               Math.max(analyzedCases.filter(c => c.sentence > 0).length, 1);
+
+            // Simple scoring system
+            let confidence = 65;
+            let prediction = '根據分析，法官可能';
+            let reasoning = [];
+
+            // Check case characteristics
+            if (hypotheticalText.includes('借款') || hypotheticalText.includes('債務')) {
+                const contractCases = analyzedCases.filter(c => c.category === '民事');
+                if (contractCases.length > 0) {
+                    confidence = Math.min(85, confidence + 20);
+                    prediction += '傾向維持契約關係，';
+                    reasoning.push('分析中發現 ' + contractCases.length + ' 份類似民事案件');
+                }
+            }
+
+            if (hypotheticalText.includes('詐') || hypotheticalText.includes('欺')) {
+                const criminalCases = analyzedCases.filter(c => c.category === '刑事');
+                if (criminalCases.length > 0) {
+                    confidence = Math.min(90, confidence + 25);
+                    prediction += '可能科處刑罰';
+                    reasoning.push(criminalCases.length + ' 份詐欺相關案件的判決傾向');
+                }
+            }
+
+            if (hypotheticalText.includes('賠償') || hypotheticalText.includes('損害')) {
+                const awards = analyzedCases.filter(c => c.award > 0).map(c => c.award);
+                if (awards.length > 0) {
+                    const predicted = Math.round(avgAward * 0.8);
+                    prediction += `，賠償金額可能在 新臺幣 ${(predicted / 1000).toFixed(0)} 千元至 ${(predicted * 1.2 / 1000).toFixed(0)} 千元之間`;
+                    reasoning.push(`平均判決賠償額為 ${(avgAward / 1000000).toFixed(1)} 百萬元`);
+                }
+            }
+
+            if (prediction === '根據分析，法官可能') {
+                prediction += '綜合案件情節作出判決';
+                reasoning.push('該假設案件與已分析案件特徵相關性有限');
+                confidence = 55;
+            }
+
+            return {
+                prediction: prediction + '。',
+                confidence: confidence,
+                reasoning: reasoning.length > 0 ? reasoning : ['基於 ' + analyzedCases.length + ' 份判決案件分析']
+            };
+        }
+
+        function displayPrediction(prediction) {
+            const resultDiv = document.getElementById('predictionResult');
+            resultDiv.innerHTML = `
+                <div class="prediction-result">
+                    <h3 style="margin-bottom: 15px;">預測結果</h3>
+                    <p style="margin-bottom: 15px;">${prediction.prediction}</p>
+
+                    <div style="margin-bottom: 10px;">
+                        <strong>信心度: ${prediction.confidence}%</strong>
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${prediction.confidence}%">
+                            ${prediction.confidence}%
+                        </div>
+                    </div>
+
+                    <h4 style="color: #1fb0a8; margin-top: 15px; margin-bottom: 10px;">分析依據</h4>
+                    <ul style="color: #a8b5c8; padding-left: 20px;">
+                        ${prediction.reasoning.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+
+                    <p style="font-size: 0.85em; color: #7a8a9a; margin-top: 15px;">
+                        ⓘ 此預測基於規則型分析和歷史案件模式。實際判決結果取決於具體案情、法官的個人考量和當前法律環境。
+                    </p>
+                </div>
+            `;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            showMessage('工具已就緒。請輸入判決文書或上傳檔案開始分析。', 'info');
+        });
+    </script>
+</body>
+</html>
