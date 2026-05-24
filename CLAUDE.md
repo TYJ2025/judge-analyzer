@@ -14,19 +14,21 @@
 
 ```
 Judge Analyzer/
-├── judge-analyzer.html   # 全部都在這 1 檔（CSS + JS 內嵌, ~55 KB / 1400+ 行）
+├── index.html            # 全部都在這 1 檔（CSS + JS 內嵌, ~55 KB / 1400+ 行）
+├── CLAUDE.md             # 本檔
 ├── README.md             # 公開說明
 ├── .gitignore            # .DS_Store / *.swp 等
 └── .git/                 # 連到 github.com:TYJ2025/judge-analyzer (HTTPS)
 ```
 
-目前只有 1 個 commit (`738cf53` Initial commit)，working tree clean。
+（檔名為 `index.html` 以讓 GH Pages 的 `/` 直接服務。原 `judge-analyzer.html` 在 2026-05-24 改名）
 
 ---
 
 ## 3. 怎麼用
 
-1. 用瀏覽器直接開 `judge-analyzer.html`（雙擊即可，不用 server）。
+1. 線上：https://tyj2025.github.io/judge-analyzer/（**public** GitHub Pages，免 setup 即可分享）。
+2. 本機：用瀏覽器開 `index.html`（雙擊即可，不用 server）。
 2. 三種輸入：
    - 貼裁判全文到 textarea（支援多份，自動 parse）
    - 上傳 JSON / CSV / XLSX（司法院 judgment.judicial.gov.tw 格式）
@@ -41,8 +43,12 @@ Judge Analyzer/
 ## 4. 部署 / GitHub
 
 - Repo：https://github.com/TYJ2025/judge-analyzer（**public**，HTTPS remote）
-- **沒有開 GitHub Pages**——repo 純當原始碼存放。要分享請傳 HTML 檔本身，或自行開 Pages（Settings → Pages → main / root）。
-- 改完 `judge-analyzer.html` 要手動 `git add / commit / push`（沒有 auto-push watcher）。
+- **GH Pages 已開**（main / root，2026-05-24 啟用）。push 後約 60 秒線上版自動更新。
+- 改完 `index.html` 要手動 `git add / commit / push`（沒有 auto-push watcher）。要驗證部署：
+  ```bash
+  gh run list --repo TYJ2025/judge-analyzer --limit 3
+  curl -sI "https://tyj2025.github.io/judge-analyzer/" | head -3
+  ```
 
 ---
 
